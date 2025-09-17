@@ -20,8 +20,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { PyodideInterface } from "pyodide";
 
 type Language = "javascript" | "python" | "c";
+
+declare global {
+  interface Window {
+    loadPyodide: () => Promise<PyodideInterface>;
+  }
+}
 
 export default function ProblemPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -32,6 +39,19 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
   const [userName, setUserName] = useState<string | null>(null);
   const [testOutput, setTestOutput] = useState<{type: 'output' | 'error', message: string} | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<Language>("javascript");
+  const [pyodide, setPyodide] = useState<PyodideInterface | null>(null);
+  const [isPyodideLoading, setIsPyodideLoading] = useState(false);
+
+  async function loadPyodideInstance() {
+    if (window.loadPyodide) {
+      setIsPyodideLoading(true);
+      const pyodideInstance = await window.loadPyodide({
+        indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.2/full/",
+      });
+      setPyodide(pyodideInstance);
+      setIsPyodideLoading(false);
+    }
+  }
 
   useEffect(() => {
     const role = localStorage.getItem("userRole");
@@ -55,27 +75,37 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
       const savedLang = localStorage.getItem(`${name}_challenge_${params.id}_lang`) as Language | null;
       
       const lang = savedLang || "javascript";
-      setSelectedLanguage(lang);
-
+      
       if(solved) {
-        // For solved problems, we might want to show the correct JS solution
-        // or the user's saved solution for that language. For now, let's show their saved code.
-         setCode(savedCode || foundChallenge.buggyCode[lang]);
+         setCode(savedCode || foundChallenge.correctCode);
       } else {
         setCode(savedCode || foundChallenge.buggyCode[lang]);
       }
+      handleLanguageChange(lang, savedCode || foundChallenge.buggyCode[lang]);
+
     } else {
         setTimeout(() => setChallenge(undefined), 100);
     }
+    
+    const script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js";
+    script.onload = () => loadPyodideInstance();
+    document.body.appendChild(script);
+
+    return () => {
+      document.body.removeChild(script);
+    }
   }, [params.id, router]);
   
-  const handleLanguageChange = (lang: Language) => {
+  const handleLanguageChange = (lang: Language, newCode?: string) => {
     if (isSolved || !challenge) return;
+
+    const codeToSet = newCode ?? challenge.buggyCode[lang];
     setSelectedLanguage(lang);
-    setCode(challenge.buggyCode[lang]);
+    setCode(codeToSet);
     if (userName) {
       localStorage.setItem(`${userName}_challenge_${params.id}_lang`, lang);
-      localStorage.setItem(`${userName}_challenge_${params.id}_code`, challenge.buggyCode[lang]);
+      localStorage.setItem(`${userName}_challenge_${params.id}_code`, codeToSet);
     }
   };
 
@@ -87,31 +117,60 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
     }
   };
   
-  const runCode = (submissionCode: string): { success: boolean; output: any; error?: string } => {
-    if (!challenge || selectedLanguage !== 'javascript') {
-      // Placeholder for other languages
-      return { success: false, output: null, error: `Execution for ${selectedLanguage} is not implemented yet.` };
+  const runCode = async (submissionCode: string): Promise<{ success: boolean; output: any; error?: string }> => {
+    if (!challenge) {
+      return { success: false, output: null, error: `Challenge not loaded.` };
     }
 
-    try {
-      const userFunction = new Function(`return ${submissionCode}`)();
-      
-      const args = challenge.testCases.input
-        .split(',')
-        .map(arg => arg.split('=')[1].trim())
-        .map(val => JSON.parse(val.replace(/(\w+)\s*:/g, '"$1":')));
-        
-      const result = userFunction(...args);
-      
-      return { success: true, output: JSON.stringify(result) };
-    } catch (e: any) {
-      return { success: false, output: null, error: e.message };
+    if (selectedLanguage === 'javascript') {
+      try {
+        // This is a simplified parser, might need to be more robust
+        const argsString = challenge.testCases.input.replace(/^[a-zA-Z0-9_]+\s*=\s*/, '');
+        const func = new Function(`return (${submissionCode})(${argsString})`);
+        const result = func();
+        return { success: true, output: JSON.stringify(result) };
+      } catch (e: any) {
+        return { success: false, output: null, error: e.message };
+      }
     }
+
+    if (selectedLanguage === 'python') {
+        if (!pyodide) {
+            return { success: false, output: null, error: "Pyodide is not loaded yet. Please wait." };
+        }
+        try {
+            // Re-create the function definition from buggy code
+            const funcNameMatch = challenge.buggyCode.python.match(/def (\w+)/);
+            if (!funcNameMatch) return { success: false, error: 'Could not find function name in Python code.', output: null };
+            const funcName = funcNameMatch[1];
+            
+            // This is a simplified parser, might need to be more robust
+            const args = challenge.testCases.input.replace(/\s/g, '');
+
+            const pythonCode = `
+import json
+${submissionCode}
+result = ${funcName}(${args})
+print(json.dumps(result))
+`;
+            const result = await pyodide.runPythonAsync(pythonCode);
+            // Pyodide's runPythonAsync returns the last expression, which is the print output
+            return { success: true, output: result.trim() };
+        } catch (e: any) {
+            return { success: false, output: null, error: e.message };
+        }
+    }
+
+    return { success: false, output: null, error: `Execution for ${selectedLanguage} is not implemented yet.` };
   };
 
-  const handleRun = () => {
+  const handleRun = async () => {
     setTestOutput(null);
-    const result = runCode(code);
+    if ((selectedLanguage === 'python' && isPyodideLoading) || (selectedLanguage === 'python' && !pyodide)) {
+      setTestOutput({ type: 'error', message: 'Python environment is loading. Please wait a moment...' });
+      return;
+    }
+    const result = await runCode(code);
     if (result.error) {
       setTestOutput({ type: 'error', message: result.error });
     } else {
@@ -119,21 +178,25 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!challenge || !userName) return;
 
-    if (selectedLanguage !== 'javascript') {
+    if (selectedLanguage === 'c') {
       toast({
         variant: "destructive",
         title: "Submission not implemented",
-        description: `Submission for ${selectedLanguage} is not set up yet.`,
+        description: `Submission for C is not set up yet.`,
       });
-      // In the future, this is where you'd call the external execution API
+      return;
+    }
+    
+    if ((selectedLanguage === 'python' && isPyodideLoading) || (selectedLanguage === 'python' && !pyodide)) {
+      setTestOutput({ type: 'error', message: 'Python environment is loading. Please wait a moment...' });
       return;
     }
 
     setTestOutput(null);
-    const result = runCode(code);
+    const result = await runCode(code);
 
     if (result.error) {
         setTestOutput({ type: 'error', message: result.error });
@@ -145,7 +208,7 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
         return;
     }
 
-    const normalizedOutput = result.output?.replace(/\s/g, "");
+    const normalizedOutput = result.output?.toString().replace(/\s/g, "");
     const normalizedExpectedOutput = challenge.testCases.output.replace(/\s/g, "");
 
     if (normalizedOutput === normalizedExpectedOutput) {
@@ -189,6 +252,8 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
     return <div>Loading...</div>;
   }
   
+  const isExecutionDisabled = isSolved || (selectedLanguage === 'python' && isPyodideLoading);
+
   return (
     <div className="grid h-full flex-1 grid-cols-1 gap-6 lg:grid-cols-2">
       <div className="flex flex-col gap-6">
@@ -229,7 +294,7 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
                 <SelectContent>
                   <SelectItem value="javascript">JavaScript</SelectItem>
                   <SelectItem value="python">Python</SelectItem>
-                  <SelectItem value="c">C</SelectItem>
+                  <SelectItem value="c">C (Not Supported)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -245,10 +310,10 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
           </CardContent>
         </Card>
         <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={handleRun} disabled={isSolved}>
-              Run Code
+            <Button variant="outline" onClick={handleRun} disabled={isExecutionDisabled}>
+              { (selectedLanguage === 'python' && isPyodideLoading) ? 'Loading Python...' : 'Run Code'}
             </Button>
-            <Button onClick={handleSubmit} disabled={isSolved}>
+            <Button onClick={handleSubmit} disabled={isExecutionDisabled}>
               {isSolved ? 'Solved!' : 'Submit & Check'}
             </Button>
         </div>

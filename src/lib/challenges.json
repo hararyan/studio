@@ -1,4 +1,3 @@
-
 [
   {
     "id": 1,
@@ -6,13 +5,13 @@
     "description": "The function should find two numbers that sum up to the target. The current implementation has a logical error.",
     "buggyCode": {
       "javascript": "function twoSum(nums, target) {\n  const numMap = {};\n  for (let i = 0; i <= nums.length; i++) { // Hint: Check the loop condition\n    const complement = target - nums[i];\n    if (numMap[complement] !== undefined) {\n      return [numMap[complement], i];\n    }\n    numMap[nums[i]] = i;\n  }\n  return [];\n}",
-      "python": "def two_sum(nums, target):\n    num_map = {}\n    # Hint: Check the loop range\n    for i in range(len(nums) + 1):\n        complement = target - nums[i]\n        if complement in num_map:\n            return [num_map[complement], i]\n        num_map[nums[i]] = i\n    return []",
+      "python": "def two_sum(nums, target):\n    num_map = {}\n    # Hint: Check the loop range\n    for i in range(len(nums) + 1):\n        if i >= len(nums): continue # Guard against index out of bounds\n        complement = target - nums[i]\n        if complement in num_map:\n            return [num_map[complement], i]\n        num_map[nums[i]] = i\n    return []",
       "c": "#include <stdio.h>\n\n// This is a placeholder for a C implementation.\n// Note: Execution is not supported for C in this version.\nvoid twoSum(int* nums, int numsSize, int target, int* returnSize) {\n    // Buggy C code would go here.\n    printf(\"C execution is not supported in this simplified version.\\n\");\n    *returnSize = 0;\n    return;\n}"
     },
     "correctCode": "function twoSum(nums, target) {\n  const numMap = {};\n  for (let i = 0; i < nums.length; i++) {\n    const complement = target - nums[i];\n    if (numMap[complement] !== undefined) {\n      return [numMap[complement], i];\n    }\n    numMap[nums[i]] = i;\n  }\n  return [];\n}",
     "testCases": {
       "input": "nums = [2, 7, 11, 15], target = 9",
-      "output": "[0, 1]"
+      "output": "[0,1]"
     },
     "language": "javascript"
   },
@@ -27,7 +26,7 @@
     },
     "correctCode": "function isPalindrome(s) {\n  const cleanString = s.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();\n  const reversedString = cleanString.split('').reverse().join('');\n  return cleanString === reversedString;\n}",
     "testCases": {
-      "input": "'A man, a plan, a canal: Panama'",
+      "input": "s = 'A man, a plan, a canal: Panama'",
       "output": "true"
     },
     "language": "javascript"
