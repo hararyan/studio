@@ -1,10 +1,9 @@
 "use client";
 
-import type { Metadata } from "next";
-import { Bug } from "lucide-react";
 import Link from "next/link";
 import "./globals.css";
 import { usePathname } from "next/navigation";
+import { Bug } from "lucide-react";
 
 import {
   Sidebar,
@@ -17,11 +16,7 @@ import {
 import { Toaster } from "@/components/ui/toaster";
 import { UserNav } from "@/components/user-nav";
 import { MainNav } from "@/components/main-nav";
-
-// export const metadata: Metadata = {
-//   title: "DebugArena",
-//   description: "A platform for debugging competitions.",
-// };
+import { Button } from "@/components/ui/button";
 
 export default function RootLayout({
   children,
@@ -43,7 +38,11 @@ export default function RootLayout({
             crossOrigin="anonymous"
           />
           <link
-            href="https://fonts.googleapis.com/css2?family=Inter&display=swap"
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
+            rel="stylesheet"
+          />
+           <link
+            href="https://fonts.googleapis.com/css2?family=Source+Code+Pro&display=swap"
             rel="stylesheet"
           />
         </head>
@@ -67,11 +66,11 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
         <link
-          href="https://fonts.googleapis.com/css2?family=Inter&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
           rel="stylesheet"
         />
         <link
-          href="https://fonts.googleapis.com/css2?family=Fira+Code&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Source+Code+Pro&display=swap"
           rel="stylesheet"
         />
       </head>
@@ -106,8 +105,3 @@ export default function RootLayout({
     </html>
   );
 }
-
-// NOTE: It is not a good practice to export components from layout files.
-// We are doing it here to make it easy for the AI to reason about the code.
-// Please do not do this in your own code.
-import { Button } from "@/components/ui/button";

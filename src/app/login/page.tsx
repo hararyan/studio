@@ -18,22 +18,32 @@ import { Bug } from "lucide-react";
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [accessCode, setAccessCode] = useState("");
 
   const handleLogin = () => {
-    if (password === "ADMIN 2025") {
-      // For simplicity, we'll use localStorage to simulate sessions
+    if (!name.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: "Please enter your name.",
+      });
+      return;
+    }
+
+    if (accessCode === "ADMIN2024") {
       localStorage.setItem("userRole", "admin");
+      localStorage.setItem("userName", name);
       router.push("/admin");
-    } else if (email && password) {
-      localStorage.setItem("userRole", "user");
+    } else if (accessCode === "DEBUG2024") {
+      localStorage.setItem("userRole", "participant");
+      localStorage.setItem("userName", name);
       router.push("/dashboard");
     } else {
       toast({
         variant: "destructive",
         title: "Login Failed",
-        description: "Please enter a valid email and password.",
+        description: "Invalid access code. Please try again.",
       });
     }
   };
@@ -45,36 +55,37 @@ export default function LoginPage() {
           <div className="flex items-center justify-center mb-4">
              <Bug className="h-12 w-12 text-primary" />
           </div>
-          <CardTitle className="text-2xl text-center">Login to DebugArena</CardTitle>
+          <CardTitle className="text-2xl text-center">Welcome to DebugArena</CardTitle>
           <CardDescription className="text-center">
-            Enter your email below to login to your account. Use password 'ADMIN 2025' for admin access.
+            Enter your name and the access code to begin.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="name">Name</Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="m@example.com"
+                id="name"
+                type="text"
+                placeholder="Your Name"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="access-code">Access Code</Label>
               <Input
-                id="password"
+                id="access-code"
                 type="password"
                 required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                placeholder="e.g., DEBUG2024"
+                value={accessCode}
+                onChange={(e) => setAccessCode(e.target.value)}
               />
             </div>
             <Button onClick={handleLogin} className="w-full">
-              Login
+              Start Debugging
             </Button>
           </div>
         </CardContent>
