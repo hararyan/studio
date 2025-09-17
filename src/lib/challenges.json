@@ -4,7 +4,11 @@
     "id": 1,
     "title": "Two Sum Problem",
     "description": "The function should find two numbers that sum up to the target. The current implementation has a logical error.",
-    "buggyCode": "function twoSum(nums, target) {\n  const numMap = {};\n  for (let i = 0; i <= nums.length; i++) { // Hint: Check the loop condition\n    const complement = target - nums[i];\n    if (numMap[complement] !== undefined) {\n      return [numMap[complement], i];\n    }\n    numMap[nums[i]] = i;\n  }\n  return [];\n}",
+    "buggyCode": {
+      "javascript": "function twoSum(nums, target) {\n  const numMap = {};\n  for (let i = 0; i <= nums.length; i++) { // Hint: Check the loop condition\n    const complement = target - nums[i];\n    if (numMap[complement] !== undefined) {\n      return [numMap[complement], i];\n    }\n    numMap[nums[i]] = i;\n  }\n  return [];\n}",
+      "python": "def two_sum(nums, target):\n    num_map = {}\n    # Hint: Check the loop range\n    for i in range(len(nums) + 1):\n        complement = target - nums[i]\n        if complement in num_map:\n            return [num_map[complement], i]\n        num_map[nums[i]] = i\n    return []",
+      "c": "#include <stdio.h>\n\n// This is a placeholder for a C implementation.\n// Note: Execution is not supported for C in this version.\nvoid twoSum(int* nums, int numsSize, int target, int* returnSize) {\n    // Buggy C code would go here.\n    printf(\"C execution is not supported in this simplified version.\\n\");\n    *returnSize = 0;\n    return;\n}"
+    },
     "correctCode": "function twoSum(nums, target) {\n  const numMap = {};\n  for (let i = 0; i < nums.length; i++) {\n    const complement = target - nums[i];\n    if (numMap[complement] !== undefined) {\n      return [numMap[complement], i];\n    }\n    numMap[nums[i]] = i;\n  }\n  return [];\n}",
     "testCases": {
       "input": "nums = [2, 7, 11, 15], target = 9",
@@ -16,7 +20,11 @@
     "id": 2,
     "title": "Palindrome Checker",
     "description": "This function fails to correctly identify palindromes for strings with mixed casing. Modify it to be case-insensitive.",
-    "buggyCode": "function isPalindrome(s) {\n  const cleanString = s.replace(/[^a-zA-Z0-9]/g, '');\n  const reversedString = cleanString.split('').reverse().join('');\n  // The comparison is case-sensitive!\n  return cleanString === reversedString;\n}",
+    "buggyCode": {
+      "javascript": "function isPalindrome(s) {\n  const cleanString = s.replace(/[^a-zA-Z0-9]/g, '');\n  const reversedString = cleanString.split('').reverse().join('');\n  // The comparison is case-sensitive!\n  return cleanString === reversedString;\n}",
+      "python": "import re\n\ndef is_palindrome(s):\n    clean_string = re.sub(r'[^A-Za-z0-9]', '', s)\n    # The comparison is case-sensitive!\n    return clean_string == clean_string[::-1]",
+      "c": "#include <stdio.h>\n#include <string.h>\n#include <ctype.h>\n\n// This is a placeholder for a C implementation.\nvoid isPalindrome(char *s) {\n    printf(\"C execution is not supported in this simplified version.\\n\");\n}"
+    },
     "correctCode": "function isPalindrome(s) {\n  const cleanString = s.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();\n  const reversedString = cleanString.split('').reverse().join('');\n  return cleanString === reversedString;\n}",
     "testCases": {
       "input": "'A man, a plan, a canal: Panama'",
@@ -28,7 +36,11 @@
     "id": 3,
     "title": "Binary Search Off-by-One",
     "description": "A classic off-by-one error in the binary search algorithm is causing it to fail. Find and fix the boundary condition.",
-    "buggyCode": "function search(nums, target) {\n  let left = 0;\n  let right = nums.length; // Hint: What should the initial right boundary be?\n  while (left <= right) {\n    let mid = Math.floor(left + (right - left) / 2);\n    if (nums[mid] === target) {\n      return mid;\n    } else if (nums[mid] < target) {\n      left = mid + 1;\n    } else {\n      right = mid - 1;\n    }\n  }\n  return -1;\n}",
+    "buggyCode": {
+      "javascript": "function search(nums, target) {\n  let left = 0;\n  let right = nums.length; // Hint: What should the initial right boundary be?\n  while (left <= right) {\n    let mid = Math.floor(left + (right - left) / 2);\n    if (nums[mid] === target) {\n      return mid;\n    } else if (nums[mid] < target) {\n      left = mid + 1;\n    } else {\n      right = mid - 1;\n    }\n  }\n  return -1;\n}",
+      "python": "def search(nums, target):\n    left, right = 0, len(nums) # Hint: What should the initial right boundary be?\n    while left <= right:\n        mid = (left + right) // 2\n        if mid >= len(nums) or mid < 0: return -1 # Guard against index out of bounds\n        if nums[mid] == target:\n            return mid\n        elif nums[mid] < target:\n            left = mid + 1\n        else:\n            right = mid - 1\n    return -1",
+      "c": "#include <stdio.h>\n\n// This is a placeholder for a C implementation.\nint search(int* nums, int numsSize, int target) {\n    printf(\"C execution is not supported in this simplified version.\\n\");\n    return -1;\n}"
+    },
     "correctCode": "function search(nums, target) {\n  let left = 0;\n  let right = nums.length - 1;\n  while (left <= right) {\n    let mid = Math.floor(left + (right - left) / 2);\n    if (nums[mid] === target) {\n      return mid;\n    } else if (nums[mid] < target) {\n      left = mid + 1;\n    } else {\n      right = mid - 1;\n    }\n  }\n  return -1;\n}",
     "testCases": {
       "input": "nums = [-1,0,3,5,9,12], target = 9",
@@ -40,7 +52,11 @@
     "id": 4,
     "title": "Fibonacci Sequence Bug",
     "description": "The recursive function for the Fibonacci sequence is incorrect. It is not returning the right values for the sequence.",
-    "buggyCode": "function fib(n) {\n  if (n <= 0) { // Hint: What is the base case for fib(1)?\n    return 0;\n  }\n  if (n === 1) {\n    return 1;\n  }\n  return fib(n - 2) + fib(n - 3); // There's a bug in the recursion\n}",
+    "buggyCode": {
+      "javascript": "function fib(n) {\n  if (n <= 0) { // Hint: What is the base case for fib(1)?\n    return 0;\n  }\n  if (n === 1) {\n    return 1;\n  }\n  return fib(n - 2) + fib(n - 3); // There's a bug in the recursion\n}",
+      "python": "def fib(n):\n    if n <= 0:\n        return 0\n    if n == 1:\n        return 1\n    # There's a bug in the recursion\n    return fib(n - 2) + fib(n - 3)",
+      "c": "#include <stdio.h>\n\n// This is a placeholder for a C implementation.\nint fib(int n) {\n    printf(\"C execution is not supported in this simplified version.\\n\");\n    return 0;\n}"
+    },
     "correctCode": "function fib(n) {\n  if (n <= 1) {\n    return n;\n  }\n  return fib(n - 1) + fib(n - 2);\n}",
     "testCases": {
       "input": "n = 6",

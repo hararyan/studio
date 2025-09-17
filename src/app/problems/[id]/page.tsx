@@ -13,6 +13,15 @@ import { Button } from "@/components/ui/button";
 import { CodeEditor } from "@/components/code-editor";
 import { useToast } from "@/hooks/use-toast";
 import { TestResults } from "@/components/test-results";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+type Language = "javascript" | "python" | "c";
 
 export default function ProblemPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -22,6 +31,7 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
   const [isSolved, setIsSolved] = useState(false);
   const [userName, setUserName] = useState<string | null>(null);
   const [testOutput, setTestOutput] = useState<{type: 'output' | 'error', message: string} | null>(null);
+  const [selectedLanguage, setSelectedLanguage] = useState<Language>("javascript");
 
   useEffect(() => {
     const role = localStorage.getItem("userRole");
@@ -45,13 +55,26 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
         setCode(foundChallenge.correctCode);
       } else {
         const savedCode = localStorage.getItem(`${name}_challenge_${params.id}_code`);
-        setCode(savedCode || foundChallenge.buggyCode);
+        const savedLang = localStorage.getItem(`${name}_challenge_${params.id}_lang`) as Language | null;
+        
+        const lang = savedLang || "javascript";
+        setSelectedLanguage(lang);
+        setCode(savedCode || foundChallenge.buggyCode[lang]);
       }
     } else {
-        // Delay notFound to allow useEffect to run
         setTimeout(() => setChallenge(undefined), 100);
     }
   }, [params.id, router]);
+  
+  const handleLanguageChange = (lang: Language) => {
+    if (isSolved || !challenge) return;
+    setSelectedLanguage(lang);
+    setCode(challenge.buggyCode[lang]);
+    if (userName) {
+      localStorage.setItem(`${userName}_challenge_${params.id}_lang`, lang);
+      localStorage.setItem(`${userName}_challenge_${params.id}_code`, challenge.buggyCode[lang]);
+    }
+  };
 
   const handleCodeChange = (newCode: string) => {
     if (isSolved) return;
@@ -62,20 +85,17 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
   };
   
   const runCode = (submissionCode: string): { success: boolean; output: any; error?: string } => {
-    if (!challenge) return { success: false, output: null, error: "Challenge not loaded." };
+    if (!challenge || selectedLanguage !== 'javascript') {
+      return { success: false, output: null, error: "Execution is only supported for JavaScript." };
+    }
 
     try {
-      // This is a simplified and UNSAFE way to run code.
-      // It's acceptable for this internal tool, but NEVER do this in a real production app
-      // with untrusted user input due to major security risks (XSS, etc.).
       const userFunction = new Function(`return ${submissionCode}`)();
       
-      // A simple way to parse the input string into function arguments.
-      // This is brittle and assumes a specific format like "nums = [2, 7, 11, 15], target = 9"
       const args = challenge.testCases.input
         .split(',')
         .map(arg => arg.split('=')[1].trim())
-        .map(val => JSON.parse(val.replace(/(\w+)\s*:/g, '"$1":'))); // A bit of regex to handle object keys
+        .map(val => JSON.parse(val.replace(/(\w+)\s*:/g, '"$1":')));
         
       const result = userFunction(...args);
       
@@ -95,9 +115,17 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
     }
   };
 
-
   const handleSubmit = () => {
     if (!challenge || !userName) return;
+    
+    if (selectedLanguage !== 'javascript') {
+      toast({
+        variant: "destructive",
+        title: "Submission not supported",
+        description: "You can only submit solutions in JavaScript.",
+      });
+      return;
+    }
 
     setTestOutput(null);
     const result = runCode(code);
@@ -112,7 +140,6 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
         return;
     }
 
-    // Normalize output for comparison
     const normalizedOutput = result.output?.replace(/\s/g, "");
     const normalizedExpectedOutput = challenge.testCases.output.replace(/\s/g, "");
 
@@ -156,6 +183,8 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
   if (!challenge) {
     return <div>Loading...</div>;
   }
+  
+  const isExecutionDisabled = selectedLanguage !== 'javascript' || isSolved;
 
   return (
     <div className="grid h-full flex-1 grid-cols-1 gap-6 lg:grid-cols-2">
@@ -190,25 +219,33 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Code Editor</CardTitle>
-              <span className="text-sm font-medium bg-secondary text-secondary-foreground px-3 py-1 rounded-md">
-                JavaScript
-              </span>
+              <Select value={selectedLanguage} onValueChange={(value) => handleLanguageChange(value as Language)}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Language" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="javascript">JavaScript</SelectItem>
+                  <SelectItem value="python">Python</SelectItem>
+                  <SelectItem value="c">C</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardHeader>
           <CardContent className="flex-1 flex flex-col gap-4">
              <CodeEditor 
                 value={code} 
-                language={challenge.language} 
+                language={selectedLanguage} 
                 onChange={handleCodeChange}
+                readOnly={isSolved}
              />
              <TestResults results={testOutput} />
           </CardContent>
         </Card>
         <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={handleRun} disabled={isSolved}>
+            <Button variant="outline" onClick={handleRun} disabled={isExecutionDisabled}>
               Run Code
             </Button>
-            <Button onClick={handleSubmit} disabled={isSolved}>
+            <Button onClick={handleSubmit} disabled={isExecutionDisabled}>
               {isSolved ? 'Solved!' : 'Submit & Check'}
             </Button>
         </div>
