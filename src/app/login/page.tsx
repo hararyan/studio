@@ -19,6 +19,7 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [accessCode, setAccessCode] = useState("");
 
   const handleLogin = () => {
@@ -30,14 +31,25 @@ export default function LoginPage() {
       });
       return;
     }
+    
+    if (!email.trim() || !/^\S+@\S+\.\S+$/.test(email)) {
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: "Please enter a valid email address.",
+      });
+      return;
+    }
 
     if (accessCode === "ADMIN2024") {
       localStorage.setItem("userRole", "admin");
       localStorage.setItem("userName", name);
+      localStorage.setItem("userEmail", email);
       router.push("/admin");
     } else if (accessCode === "DEBUG2024") {
       localStorage.setItem("userRole", "participant");
       localStorage.setItem("userName", name);
+      localStorage.setItem("userEmail", email);
       router.push("/dashboard");
     } else {
       toast({
@@ -57,7 +69,7 @@ export default function LoginPage() {
           </div>
           <CardTitle className="text-2xl text-center">Welcome to DebugArena</CardTitle>
           <CardDescription className="text-center">
-            Enter your name and the access code to begin.
+            Enter your details and the access code to begin.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -71,6 +83,17 @@ export default function LoginPage() {
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+             <div className="grid gap-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="your.email@example.com"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <div className="grid gap-2">

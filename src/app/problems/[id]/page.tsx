@@ -36,7 +36,7 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
   const [challenge, setChallenge] = useState<Challenge | null>(null);
   const [code, setCode] = useState("");
   const [isSolved, setIsSolved] = useState(false);
-  const [userName, setUserName] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [testOutput, setTestOutput] = useState<{type: 'output' | 'error', message: string} | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<Language>("javascript");
   const [pyodide, setPyodide] = useState<PyodideInterface | null>(null);
@@ -55,24 +55,24 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     const role = localStorage.getItem("userRole");
-    const name = localStorage.getItem("userName");
-    if (role !== "participant" || !name) {
+    const email = localStorage.getItem("userEmail");
+    if (role !== "participant" || !email) {
       router.push("/login");
       return;
     }
-    setUserName(name);
+    setUserEmail(email);
 
     const foundChallenge = challenges.find((c) => c.id.toString() === params.id);
     if (foundChallenge) {
       setChallenge(foundChallenge);
       
-      const storedSolved = localStorage.getItem(`${name}_solved`);
+      const storedSolved = localStorage.getItem(`${email}_solved`);
       const solvedIds = storedSolved ? JSON.parse(storedSolved) : [];
       const solved = solvedIds.includes(foundChallenge.id);
       setIsSolved(solved);
 
-      const savedCode = localStorage.getItem(`${name}_challenge_${params.id}_code`);
-      const savedLang = localStorage.getItem(`${name}_challenge_${params.id}_lang`) as Language | null;
+      const savedCode = localStorage.getItem(`${email}_challenge_${params.id}_code`);
+      const savedLang = localStorage.getItem(`${email}_challenge_${params.id}_lang`) as Language | null;
       
       const lang = savedLang || "javascript";
       
@@ -103,17 +103,17 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
     const codeToSet = newCode ?? challenge.buggyCode[lang];
     setSelectedLanguage(lang);
     setCode(codeToSet);
-    if (userName) {
-      localStorage.setItem(`${userName}_challenge_${params.id}_lang`, lang);
-      localStorage.setItem(`${userName}_challenge_${params.id}_code`, codeToSet);
+    if (userEmail) {
+      localStorage.setItem(`${userEmail}_challenge_${params.id}_lang`, lang);
+      localStorage.setItem(`${userEmail}_challenge_${params.id}_code`, codeToSet);
     }
   };
 
   const handleCodeChange = (newCode: string) => {
     if (isSolved) return;
     setCode(newCode);
-    if (userName) {
-      localStorage.setItem(`${userName}_challenge_${params.id}_code`, newCode);
+    if (userEmail) {
+      localStorage.setItem(`${userEmail}_challenge_${params.id}_code`, newCode);
     }
   };
   
@@ -179,7 +179,7 @@ print(json.dumps(result))
   };
 
   const handleSubmit = async () => {
-    if (!challenge || !userName) return;
+    if (!challenge || !userEmail) return;
 
     if (selectedLanguage === 'c') {
       toast({
@@ -214,14 +214,14 @@ print(json.dumps(result))
     if (normalizedOutput === normalizedExpectedOutput) {
       setIsSolved(true);
 
-      const storedSolved = localStorage.getItem(`${userName}_solved`);
+      const storedSolved = localStorage.getItem(`${userEmail}_solved`);
       const solvedIds = storedSolved ? JSON.parse(storedSolved) : [];
       if (!solvedIds.includes(challenge.id)) {
         const newSolvedIds = [...solvedIds, challenge.id];
-        localStorage.setItem(`${userName}_solved`, JSON.stringify(newSolvedIds));
+        localStorage.setItem(`${userEmail}_solved`, JSON.stringify(newSolvedIds));
         
         if (newSolvedIds.length === challenges.length) {
-          localStorage.setItem(`${userName}_finishTime`, Date.now().toString());
+          localStorage.setItem(`${userEmail}_finishTime`, Date.now().toString());
         }
 
         window.dispatchEvent(new Event('storage'));

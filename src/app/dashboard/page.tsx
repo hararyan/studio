@@ -12,6 +12,7 @@ import Link from "next/link";
 export default function DashboardPage() {
   const router = useRouter();
   const [userName, setUserName] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [solvedChallenges, setSolvedChallenges] = useState<number[]>([]);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -19,25 +20,27 @@ export default function DashboardPage() {
   useEffect(() => {
     const role = localStorage.getItem("userRole");
     const name = localStorage.getItem("userName");
+    const email = localStorage.getItem("userEmail");
 
-    if (role !== "participant" || !name) {
+    if (role !== "participant" || !name || !email) {
       router.push("/login");
       return;
     }
     
     setUserName(name);
+    setUserEmail(email);
 
-    const storedSolved = localStorage.getItem(`${name}_solved`);
+    const storedSolved = localStorage.getItem(`${email}_solved`);
     if (storedSolved) {
       setSolvedChallenges(JSON.parse(storedSolved));
     }
 
-    const storedStartTime = localStorage.getItem(`${name}_startTime`);
+    const storedStartTime = localStorage.getItem(`${email}_startTime`);
     if (storedStartTime) {
       setStartTime(parseInt(storedStartTime, 10));
     } else {
       const now = Date.now();
-      localStorage.setItem(`${name}_startTime`, now.toString());
+      localStorage.setItem(`${email}_startTime`, now.toString());
       setStartTime(now);
     }
   }, [router]);
@@ -61,7 +64,7 @@ export default function DashboardPage() {
 
   const progress = (solvedChallenges.length / challenges.length) * 100;
 
-  if (!userName) {
+  if (!userName || !userEmail) {
     return null; // or a loading spinner
   }
 
