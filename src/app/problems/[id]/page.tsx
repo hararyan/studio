@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -21,6 +22,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { PyodideInterface } from "pyodide";
+import { db } from "@/lib/firebase";
+import { doc, getDoc, setDoc, updateDoc, arrayUnion } from "firebase/firestore";
 
 type Language = "javascript" | "python" | "c";
 
@@ -64,24 +67,30 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
 
     const foundChallenge = challenges.find((c) => c.id.toString() === params.id);
     if (foundChallenge) {
-      setChallenge(foundChallenge);
-      
-      const storedSolved = localStorage.getItem(`${email}_solved`);
-      const solvedIds = storedSolved ? JSON.parse(storedSolved) : [];
-      const solved = solvedIds.includes(foundChallenge.id);
-      setIsSolved(solved);
+        setChallenge(foundChallenge);
 
-      const savedCode = localStorage.getItem(`${email}_challenge_${params.id}_code`);
-      const savedLang = localStorage.getItem(`${email}_challenge_${params.id}_lang`) as Language | null;
-      
-      const lang = savedLang || "javascript";
-      
-      if(solved) {
-         setCode(savedCode || foundChallenge.correctCode);
-      } else {
-        setCode(savedCode || foundChallenge.buggyCode[lang]);
-      }
-      handleLanguageChange(lang, savedCode || foundChallenge.buggyCode[lang]);
+        const userDocRef = doc(db, "participants", email);
+        getDoc(userDocRef).then(docSnap => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                const solvedIds = data.solved || [];
+                const solved = solvedIds.includes(foundChallenge.id);
+                setIsSolved(solved);
+
+                const problemData = data.problems?.[`problem_${params.id}`] || {};
+                const savedCode = problemData.code;
+                const savedLang = problemData.lang as Language | null;
+                
+                const lang = savedLang || "javascript";
+                
+                if(solved) {
+                    setCode(savedCode || foundChallenge.correctCode);
+                } else {
+                    setCode(savedCode || foundChallenge.buggyCode[lang]);
+                }
+                handleLanguageChange(lang, savedCode || foundChallenge.buggyCode[lang], true);
+            }
+        });
 
     } else {
         setTimeout(() => setChallenge(undefined), 100);
@@ -97,15 +106,22 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
     }
   }, [params.id, router]);
   
-  const handleLanguageChange = (lang: Language, newCode?: string) => {
+  const handleLanguageChange = (lang: Language, newCode?: string, initialLoad = false) => {
     if (isSolved || !challenge) return;
 
     const codeToSet = newCode ?? challenge.buggyCode[lang];
     setSelectedLanguage(lang);
     setCode(codeToSet);
-    if (userEmail) {
-      localStorage.setItem(`${userEmail}_challenge_${params.id}_lang`, lang);
-      localStorage.setItem(`${userEmail}_challenge_${params.id}_code`, codeToSet);
+    if (userEmail && !initialLoad) {
+      const userDocRef = doc(db, "participants", userEmail);
+      setDoc(userDocRef, {
+        problems: {
+          [`problem_${params.id}`]: {
+            lang: lang,
+            code: codeToSet,
+          }
+        }
+      }, { merge: true });
     }
   };
 
@@ -113,7 +129,14 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
     if (isSolved) return;
     setCode(newCode);
     if (userEmail) {
-      localStorage.setItem(`${userEmail}_challenge_${params.id}_code`, newCode);
+       const userDocRef = doc(db, "participants", userEmail);
+       setDoc(userDocRef, {
+        problems: {
+          [`problem_${params.id}`]: {
+            code: newCode,
+          }
+        }
+      }, { merge: true });
     }
   };
   
@@ -124,7 +147,6 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
 
     if (selectedLanguage === 'javascript') {
       try {
-        // This is a simplified parser, might need to be more robust
         const argsString = challenge.testCases.input.replace(/^[a-zA-Z0-9_]+\s*=\s*/, '');
         const func = new Function(`return (${submissionCode})(${argsString})`);
         const result = func();
@@ -139,12 +161,10 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
             return { success: false, output: null, error: "Pyodide is not loaded yet. Please wait." };
         }
         try {
-            // Re-create the function definition from buggy code
             const funcNameMatch = challenge.buggyCode.python.match(/def (\w+)/);
             if (!funcNameMatch) return { success: false, error: 'Could not find function name in Python code.', output: null };
             const funcName = funcNameMatch[1];
             
-            // This is a simplified parser, might need to be more robust
             const args = challenge.testCases.input.replace(/\s/g, '');
 
             const pythonCode = `
@@ -154,7 +174,6 @@ result = ${funcName}(${args})
 print(json.dumps(result))
 `;
             const result = await pyodide.runPythonAsync(pythonCode);
-            // Pyodide's runPythonAsync returns the last expression, which is the print output
             return { success: true, output: result.trim() };
         } catch (e: any) {
             return { success: false, output: null, error: e.message };
@@ -213,18 +232,20 @@ print(json.dumps(result))
 
     if (normalizedOutput === normalizedExpectedOutput) {
       setIsSolved(true);
+      
+      const userDocRef = doc(db, "participants", userEmail);
+      await updateDoc(userDocRef, {
+        solved: arrayUnion(challenge.id)
+      });
 
-      const storedSolved = localStorage.getItem(`${userEmail}_solved`);
-      const solvedIds = storedSolved ? JSON.parse(storedSolved) : [];
-      if (!solvedIds.includes(challenge.id)) {
-        const newSolvedIds = [...solvedIds, challenge.id];
-        localStorage.setItem(`${userEmail}_solved`, JSON.stringify(newSolvedIds));
-        
-        if (newSolvedIds.length === challenges.length) {
-          localStorage.setItem(`${userEmail}_finishTime`, Date.now().toString());
+      const docSnap = await getDoc(userDocRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if(data.solved.length === challenges.length) {
+            await updateDoc(userDocRef, {
+                finishTime: Date.now()
+            });
         }
-
-        window.dispatchEvent(new Event('storage'));
       }
 
       toast({

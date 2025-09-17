@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -24,25 +25,11 @@ export function UserNav() {
   }, []);
 
   const handleLogout = () => {
-    const email = localStorage.getItem('userEmail');
-    
-    // Clear all user-specific data
-    if (email) {
-        const keysToRemove: string[] = [];
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && key.startsWith(email)) {
-                keysToRemove.push(key);
-            }
-        }
-        keysToRemove.forEach(key => localStorage.removeItem(key));
-    }
-
+    // Note: We don't clear firestore data on logout
+    // so the admin can still see the results.
     localStorage.removeItem("userName");
     localStorage.removeItem("userRole");
     localStorage.removeItem("userEmail");
-
-
     router.push("/login");
   };
 

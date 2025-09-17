@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -6,80 +7,60 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { db } from "@/lib/firebase";
+import { collection, onSnapshot, query } from "firebase/firestore";
 
-// This is a placeholder for real data fetching
-const getParticipantData = () => {
-    if (typeof window === "undefined") return [];
-    
-    const data = [];
-    const emails = new Set<string>();
-
-    // First, find all unique participant emails
-    for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && (key.endsWith("_solved") || key.endsWith("_startTime"))) {
-            emails.add(key.split('_')[0]);
-        }
-    }
-
-    // Then, construct data for each participant
-    for (const email of emails) {
-        const solvedKey = `${email}_solved`;
-        const startKey = `${email}_startTime`;
-        const finishKey = `${email}_finishTime`;
-        const name = localStorage.getItem(email) || email; // Fallback to email if name not found
-        
-        const solved = JSON.parse(localStorage.getItem(solvedKey) || "[]");
-        const startTime = localStorage.getItem(startKey);
-        const finishTime = localStorage.getItem(finishKey);
-        
-        // This is a check to ensure we are only tracking participants, not admins or other data
-        if (!localStorage.getItem(solvedKey) && !localStorage.getItem(startKey)) continue;
-
-
-        let timeTaken = "In Progress";
-        if (startTime && finishTime) {
-            const duration = parseInt(finishTime, 10) - parseInt(startTime, 10);
-            const totalSeconds = Math.floor(duration / 1000);
-            const hours = Math.floor(totalSeconds / 3600);
-            const minutes = Math.floor((totalSeconds % 3600) / 60);
-            const seconds = totalSeconds % 60;
-            timeTaken = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        }
-
-        data.push({
-            name: name,
-            email: email,
-            score: solved.length,
-            time: timeTaken,
-            solvedQuestions: solved,
-        });
-    }
-
-    return data.sort((a, b) => b.score - a.score || a.time.localeCompare(b.time));
-};
-
+interface Participant {
+    id: string;
+    name: string;
+    email: string;
+    score: number;
+    time: string;
+    solvedQuestions: number[];
+}
 
 export default function AdminPage() {
     const router = useRouter();
-    const [participantData, setParticipantData] = useState<any[]>([]);
+    const [participantData, setParticipantData] = useState<Participant[]>([]);
     
     useEffect(() => {
         const role = localStorage.getItem("userRole");
         if (role !== "admin") {
             router.push("/login");
-        } else {
-             // Initial load
-            setParticipantData(getParticipantData());
-
-            // Set up interval to refresh data
-            const interval = setInterval(() => {
-                setParticipantData(getParticipantData());
-            }, 2000); // Refresh every 2 seconds
-
-            return () => clearInterval(interval);
         }
     }, [router]);
+
+    useEffect(() => {
+        const q = query(collection(db, "participants"));
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const data: Participant[] = [];
+            querySnapshot.forEach((doc) => {
+                const docData = doc.data();
+
+                let timeTaken = "In Progress";
+                if (docData.startTime && docData.finishTime) {
+                    const duration = docData.finishTime - docData.startTime;
+                    const totalSeconds = Math.floor(duration / 1000);
+                    const hours = Math.floor(totalSeconds / 3600);
+                    const minutes = Math.floor((totalSeconds % 3600) / 60);
+                    const seconds = totalSeconds % 60;
+                    timeTaken = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                }
+
+                data.push({
+                    id: doc.id,
+                    name: docData.name || doc.id,
+                    email: doc.id,
+                    score: docData.solved?.length || 0,
+                    time: timeTaken,
+                    solvedQuestions: docData.solved || [],
+                });
+            });
+            setParticipantData(data.sort((a, b) => b.score - a.score || a.time.localeCompare(b.time)));
+        });
+
+        return () => unsubscribe();
+    }, []);
 
 
     const totalParticipants = participantData.length;

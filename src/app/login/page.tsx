@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -14,6 +15,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Bug } from "lucide-react";
+import { db } from "@/lib/firebase";
+import { doc, setDoc } from "firebase/firestore";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -22,7 +25,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [accessCode, setAccessCode] = useState("");
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!name.trim()) {
       toast({
         variant: "destructive",
@@ -50,6 +53,10 @@ export default function LoginPage() {
       localStorage.setItem("userRole", "participant");
       localStorage.setItem("userName", name);
       localStorage.setItem("userEmail", email);
+      
+      const userDocRef = doc(db, "participants", email);
+      await setDoc(userDocRef, { name: name, email: email }, { merge: true });
+
       router.push("/dashboard");
     } else {
       toast({

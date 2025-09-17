@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -8,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Timer } from "lucide-react";
 import Link from "next/link";
+import { db } from "@/lib/firebase";
+import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -30,19 +33,28 @@ export default function DashboardPage() {
     setUserName(name);
     setUserEmail(email);
 
-    const storedSolved = localStorage.getItem(`${email}_solved`);
-    if (storedSolved) {
-      setSolvedChallenges(JSON.parse(storedSolved));
-    }
+    const userDocRef = doc(db, "participants", email);
 
-    const storedStartTime = localStorage.getItem(`${email}_startTime`);
-    if (storedStartTime) {
-      setStartTime(parseInt(storedStartTime, 10));
-    } else {
-      const now = Date.now();
-      localStorage.setItem(`${email}_startTime`, now.toString());
-      setStartTime(now);
-    }
+    const unsubscribe = onSnapshot(userDocRef, (doc) => {
+      if (doc.exists()) {
+        const data = doc.data();
+        setSolvedChallenges(data.solved || []);
+        if (data.startTime) {
+          setStartTime(data.startTime);
+        } else {
+          const now = Date.now();
+          setDoc(userDocRef, { startTime: now }, { merge: true });
+          setStartTime(now);
+        }
+      } else {
+        const now = Date.now();
+        setDoc(userDocRef, { name, email, startTime: now, solved: [] });
+        setStartTime(now);
+        setSolvedChallenges([]);
+      }
+    });
+
+    return () => unsubscribe();
   }, [router]);
 
   useEffect(() => {
