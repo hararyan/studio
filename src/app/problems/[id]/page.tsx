@@ -51,14 +51,17 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
       const solved = solvedIds.includes(foundChallenge.id);
       setIsSolved(solved);
 
+      const savedCode = localStorage.getItem(`${name}_challenge_${params.id}_code`);
+      const savedLang = localStorage.getItem(`${name}_challenge_${params.id}_lang`) as Language | null;
+      
+      const lang = savedLang || "javascript";
+      setSelectedLanguage(lang);
+
       if(solved) {
-        setCode(foundChallenge.correctCode);
+        // For solved problems, we might want to show the correct JS solution
+        // or the user's saved solution for that language. For now, let's show their saved code.
+         setCode(savedCode || foundChallenge.buggyCode[lang]);
       } else {
-        const savedCode = localStorage.getItem(`${name}_challenge_${params.id}_code`);
-        const savedLang = localStorage.getItem(`${name}_challenge_${params.id}_lang`) as Language | null;
-        
-        const lang = savedLang || "javascript";
-        setSelectedLanguage(lang);
         setCode(savedCode || foundChallenge.buggyCode[lang]);
       }
     } else {
@@ -86,7 +89,8 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
   
   const runCode = (submissionCode: string): { success: boolean; output: any; error?: string } => {
     if (!challenge || selectedLanguage !== 'javascript') {
-      return { success: false, output: null, error: "Execution is only supported for JavaScript." };
+      // Placeholder for other languages
+      return { success: false, output: null, error: `Execution for ${selectedLanguage} is not implemented yet.` };
     }
 
     try {
@@ -117,13 +121,14 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
 
   const handleSubmit = () => {
     if (!challenge || !userName) return;
-    
+
     if (selectedLanguage !== 'javascript') {
       toast({
         variant: "destructive",
-        title: "Submission not supported",
-        description: "You can only submit solutions in JavaScript.",
+        title: "Submission not implemented",
+        description: `Submission for ${selectedLanguage} is not set up yet.`,
       });
+      // In the future, this is where you'd call the external execution API
       return;
     }
 
@@ -184,8 +189,6 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
     return <div>Loading...</div>;
   }
   
-  const isExecutionDisabled = selectedLanguage !== 'javascript' || isSolved;
-
   return (
     <div className="grid h-full flex-1 grid-cols-1 gap-6 lg:grid-cols-2">
       <div className="flex flex-col gap-6">
@@ -219,7 +222,7 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Code Editor</CardTitle>
-              <Select value={selectedLanguage} onValueChange={(value) => handleLanguageChange(value as Language)}>
+              <Select value={selectedLanguage} onValueChange={(value) => handleLanguageChange(value as Language)} disabled={isSolved}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Language" />
                 </SelectTrigger>
@@ -242,10 +245,10 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
           </CardContent>
         </Card>
         <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={handleRun} disabled={isExecutionDisabled}>
+            <Button variant="outline" onClick={handleRun} disabled={isSolved}>
               Run Code
             </Button>
-            <Button onClick={handleSubmit} disabled={isExecutionDisabled}>
+            <Button onClick={handleSubmit} disabled={isSolved}>
               {isSolved ? 'Solved!' : 'Submit & Check'}
             </Button>
         </div>
