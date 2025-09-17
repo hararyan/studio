@@ -1,3 +1,4 @@
+import { AddProblemForm } from "./add-problem-form";
 import { TestCaseGenerator } from "./test-case-generator";
 
 export default function AdminPage() {
@@ -9,6 +10,7 @@ export default function AdminPage() {
           Manage problems, students, and competitions.
         </p>
       </header>
+      <AddProblemForm />
       <TestCaseGenerator />
     </div>
   );

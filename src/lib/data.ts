@@ -1,3 +1,6 @@
+'use client';
+import { useState, useEffect } from 'react';
+
 export type Problem = {
   id: string;
   title: string;
@@ -6,9 +9,10 @@ export type Problem = {
   status: 'Solved' | 'Attempted' | 'Not Started';
   sampleInput: string;
   sampleOutput: string;
+  buggyCode?: string;
 };
 
-export const problems: Problem[] = [
+const initialProblems: Problem[] = [
   {
     id: '1',
     title: 'Two Sum Variant',
@@ -17,6 +21,18 @@ export const problems: Problem[] = [
     status: 'Not Started',
     sampleInput: 'nums = [2, 7, 11, 15], target = 9',
     sampleOutput: '[0, 1]',
+    buggyCode: `function twoSum(nums, target) {
+  const numMap = {};
+  for (let i = 0; i < nums.length; i++) {
+    const complement = target - nums[i];
+    if (numMap[complement] !== undefined) {
+      return [numMap[complement], i];
+    }
+    numMap[nums[i]] = i;
+  }
+  // Bug: What if no solution is found?
+  return [];
+}`
   },
   {
     id: '2',
@@ -26,6 +42,12 @@ export const problems: Problem[] = [
     status: 'Solved',
     sampleInput: 'A man, a plan, a canal: Panama',
     sampleOutput: 'true',
+    buggyCode: `function isPalindrome(s) {
+  const cleanString = s.replace(/[^a-zA-Z0-9]/g, '');
+  const reversedString = cleanString.split('').reverse().join('');
+  // Bug: Does not handle case differences
+  return cleanString === reversedString;
+}`
   },
   {
     id: '3',
@@ -35,6 +57,21 @@ export const problems: Problem[] = [
     status: 'Attempted',
     sampleInput: 'nums = [-1,0,3,5,9,12], target = 9',
     sampleOutput: '4',
+    buggyCode: `function search(nums, target) {
+  let left = 0;
+  let right = nums.length; // Bug: Should be nums.length - 1
+  while (left < right) {
+    let mid = Math.floor((left + right) / 2);
+    if (nums[mid] === target) {
+      return mid;
+    } else if (nums[mid] < target) {
+      left = mid + 1;
+    } else {
+      right = mid;
+    }
+  }
+  return -1;
+}`
   },
     {
     id: '4',
@@ -44,6 +81,14 @@ export const problems: Problem[] = [
     status: 'Not Started',
     sampleInput: 'lists = [[1,4,5],[1,3,4],[2,6]]',
     sampleOutput: '[1,1,2,3,4,4,5,6]',
+    buggyCode: `// Inefficient solution: concatenates and sorts.
+function mergeKLists(lists) {
+  let combined = [];
+  for (const list of lists) {
+    combined = combined.concat(list);
+  }
+  return combined.sort((a, b) => a - b);
+}`
   },
   {
     id: '5',
@@ -53,8 +98,65 @@ export const problems: Problem[] = [
     status: 'Not Started',
     sampleInput: 's = "leetcode", wordDict = ["leet", "code"]',
     sampleOutput: 'true',
+    buggyCode: `function wordBreak(s, wordDict) {
+  const dp = new Array(s.length + 1).fill(false);
+  dp[0] = true;
+  for (let i = 1; i <= s.length; i++) {
+    for (let j = 0; j < i; j++) {
+      // Bug: incorrect check
+      if (dp[j] && wordDict.includes(s.substring(j, i - j))) {
+        dp[i] = true;
+        break;
+      }
+    }
+  }
+  return dp[s.length];
+}`
   },
 ];
+
+let problems: Problem[] = [];
+
+// Function to get problems. It will run on client and load from localStorage.
+export const getProblems = () => {
+    const [problemList, setProblemList] = useState<Problem[]>([]);
+
+    useEffect(() => {
+        const storedProblems = localStorage.getItem("problems");
+        if (storedProblems) {
+            setProblemList(JSON.parse(storedProblems));
+        } else {
+            localStorage.setItem("problems", JSON.stringify(initialProblems));
+            setProblemList(initialProblems);
+        }
+        
+        const handleStorageChange = () => {
+            const updatedProblems = localStorage.getItem("problems");
+            if (updatedProblems) {
+                setProblemList(JSON.parse(updatedProblems));
+            }
+        };
+        window.addEventListener('storage', handleStorageChange);
+
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+        };
+
+    }, []);
+
+    return problemList;
+}
+
+// Function to add a problem.
+export const addProblem = (problem: Problem) => {
+    const storedProblems = localStorage.getItem("problems");
+    const currentProblems = storedProblems ? JSON.parse(storedProblems) : initialProblems;
+    const newProblems = [...currentProblems, problem];
+    localStorage.setItem("problems", JSON.stringify(newProblems));
+    // Dispatch a storage event to notify other components of the change
+    window.dispatchEvent(new Event("storage"));
+};
+
 
 export type LeaderboardEntry = {
   rank: number;

@@ -1,5 +1,7 @@
+"use client";
+
 import { notFound } from "next/navigation";
-import { problems } from "@/lib/data";
+import { getProblems } from "@/lib/data";
 import {
   Card,
   CardContent,
@@ -16,12 +18,16 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 
 export default function ProblemPage({ params }: { params: { id: string } }) {
+  const problems = getProblems();
   const problem = problems.find((p) => p.id === params.id);
 
   if (!problem) {
+    // Wait for problems to load
+    if (problems.length === 0) {
+        return <div>Loading...</div>
+    }
     notFound();
   }
 
@@ -67,13 +73,12 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Solution</CardTitle>
-              <Select defaultValue="java">
+              <Select defaultValue="javascript">
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Language" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="java">Java</SelectItem>
-                  <SelectItem value="c">C</SelectItem>
+                  <SelectItem value="javascript">JavaScript</SelectItem>
                   <SelectItem value="python">Python</SelectItem>
                 </SelectContent>
               </Select>
@@ -83,6 +88,7 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
             <Textarea
               placeholder="Enter your code here..."
               className="h-full resize-none font-code"
+              defaultValue={problem.buggyCode}
             />
           </CardContent>
         </Card>

@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   Table,
@@ -10,7 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { problems, type Problem } from "@/lib/data";
+import { getProblems, type Problem } from "@/lib/data";
 
 const difficultyVariant: Record<Problem['difficulty'], string> = {
     Easy: 'bg-chart-2 text-white',
@@ -26,6 +28,8 @@ const statusVariant: Record<Problem['status'], string> = {
 
 
 export default function DashboardPage() {
+  const problems = getProblems();
+
   return (
     <div className="flex flex-col gap-8">
       <header>

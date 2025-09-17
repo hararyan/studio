@@ -1,7 +1,10 @@
+"use client";
+
 import type { Metadata } from "next";
 import { Bug } from "lucide-react";
 import Link from "next/link";
 import "./globals.css";
+import { usePathname } from "next/navigation";
 
 import {
   Sidebar,
@@ -15,19 +18,48 @@ import { Toaster } from "@/components/ui/toaster";
 import { UserNav } from "@/components/user-nav";
 import { MainNav } from "@/components/main-nav";
 
-export const metadata: Metadata = {
-  title: "DebugArena",
-  description: "A platform for debugging competitions.",
-};
+// export const metadata: Metadata = {
+//   title: "DebugArena",
+//   description: "A platform for debugging competitions.",
+// };
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const pathname = usePathname();
+  const isLoginPage = pathname === "/login";
+
+  if (isLoginPage) {
+    return (
+      <html lang="en" className="dark">
+         <head>
+          <title>DebugArena - Login</title>
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link
+            rel="preconnect"
+            href="https://fonts.gstatic.com"
+            crossOrigin="anonymous"
+          />
+          <link
+            href="https://fonts.googleapis.com/css2?family=Inter&display=swap"
+            rel="stylesheet"
+          />
+        </head>
+        <body className="font-body antialiased">
+          {children}
+          <Toaster />
+        </body>
+      </html>
+    );
+  }
+
+
   return (
     <html lang="en" className="dark">
       <head>
+        <title>DebugArena</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           rel="preconnect"
