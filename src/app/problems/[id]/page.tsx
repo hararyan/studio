@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { CodeEditor } from "@/components/code-editor";
 import { useToast } from "@/hooks/use-toast";
+import { TestResults } from "@/components/test-results";
 
 export default function ProblemPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -20,6 +21,7 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
   const [code, setCode] = useState("");
   const [isSolved, setIsSolved] = useState(false);
   const [userName, setUserName] = useState<string | null>(null);
+  const [testOutput, setTestOutput] = useState<{type: 'output' | 'error', message: string} | null>(null);
 
   useEffect(() => {
     const role = localStorage.getItem("userRole");
@@ -58,14 +60,63 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
       localStorage.setItem(`${userName}_challenge_${params.id}_code`, newCode);
     }
   };
+  
+  const runCode = (submissionCode: string): { success: boolean; output: any; error?: string } => {
+    if (!challenge) return { success: false, output: null, error: "Challenge not loaded." };
+
+    try {
+      // This is a simplified and UNSAFE way to run code.
+      // It's acceptable for this internal tool, but NEVER do this in a real production app
+      // with untrusted user input due to major security risks (XSS, etc.).
+      const userFunction = new Function(`return ${submissionCode}`)();
+      
+      // A simple way to parse the input string into function arguments.
+      // This is brittle and assumes a specific format like "nums = [2, 7, 11, 15], target = 9"
+      const args = challenge.testCases.input
+        .split(',')
+        .map(arg => arg.split('=')[1].trim())
+        .map(val => JSON.parse(val.replace(/(\w+)\s*:/g, '"$1":'))); // A bit of regex to handle object keys
+        
+      const result = userFunction(...args);
+      
+      return { success: true, output: JSON.stringify(result) };
+    } catch (e: any) {
+      return { success: false, output: null, error: e.message };
+    }
+  };
+
+  const handleRun = () => {
+    setTestOutput(null);
+    const result = runCode(code);
+    if (result.error) {
+      setTestOutput({ type: 'error', message: result.error });
+    } else {
+      setTestOutput({ type: 'output', message: result.output });
+    }
+  };
+
 
   const handleSubmit = () => {
     if (!challenge || !userName) return;
 
-    // Normalize code by removing whitespace and newlines for comparison
-    const normalize = (str: string) => str.replace(/\s/g, "");
+    setTestOutput(null);
+    const result = runCode(code);
 
-    if (normalize(code) === normalize(challenge.correctCode)) {
+    if (result.error) {
+        setTestOutput({ type: 'error', message: result.error });
+        toast({
+            variant: "destructive",
+            title: "Code has errors!",
+            description: "Fix the errors before submitting.",
+        });
+        return;
+    }
+
+    // Normalize output for comparison
+    const normalizedOutput = result.output?.replace(/\s/g, "");
+    const normalizedExpectedOutput = challenge.testCases.output.replace(/\s/g, "");
+
+    if (normalizedOutput === normalizedExpectedOutput) {
       setIsSolved(true);
 
       const storedSolved = localStorage.getItem(`${userName}_solved`);
@@ -74,12 +125,11 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
         const newSolvedIds = [...solvedIds, challenge.id];
         localStorage.setItem(`${userName}_solved`, JSON.stringify(newSolvedIds));
         
-        // Check if all challenges are solved
         if (newSolvedIds.length === challenges.length) {
           localStorage.setItem(`${userName}_finishTime`, Date.now().toString());
         }
 
-        window.dispatchEvent(new Event('storage')); // Notify other tabs/components
+        window.dispatchEvent(new Event('storage'));
       }
 
       toast({
@@ -90,10 +140,11 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
       router.push("/dashboard");
 
     } else {
+       setTestOutput({ type: 'output', message: `Your output: ${result.output}\nExpected: ${challenge.testCases.output}` });
       toast({
         variant: "destructive",
         title: "Not quite...",
-        description: "The bug is still there. Keep trying!",
+        description: "Your code ran, but the output is incorrect. Check the console for details.",
       });
     }
   };
@@ -135,7 +186,7 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
         </Card>
       </div>
       <div className="flex flex-col gap-4">
-        <Card className="flex-1">
+        <Card className="flex-1 flex flex-col">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Code Editor</CardTitle>
@@ -144,16 +195,20 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
               </span>
             </div>
           </CardHeader>
-          <CardContent className="h-[calc(100%-100px)]">
+          <CardContent className="flex-1 flex flex-col gap-4">
              <CodeEditor 
                 value={code} 
                 language={challenge.language} 
                 onChange={handleCodeChange}
              />
+             <TestResults results={testOutput} />
           </CardContent>
         </Card>
         <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={handleSubmit} disabled={isSolved}>
+            <Button variant="outline" onClick={handleRun} disabled={isSolved}>
+              Run Code
+            </Button>
+            <Button onClick={handleSubmit} disabled={isSolved}>
               {isSolved ? 'Solved!' : 'Submit & Check'}
             </Button>
         </div>
