@@ -15,9 +15,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getProblems, type Problem } from "@/lib/data";
 
 const difficultyVariant: Record<Problem['difficulty'], string> = {
-    Easy: 'bg-chart-2 text-white',
-    Medium: 'bg-chart-4 text-primary-foreground',
-    Hard: 'bg-destructive text-destructive-foreground',
+    Easy: 'bg-green-600/20 text-green-400 border-green-500/50',
+    Medium: 'bg-yellow-600/20 text-yellow-400 border-yellow-500/50',
+    Hard: 'bg-red-600/20 text-red-400 border-red-500/50',
 }
 
 const statusVariant: Record<Problem['status'], string> = {
@@ -63,7 +63,7 @@ export default function DashboardPage() {
                   </TableCell>
                   <TableCell className="font-medium">{problem.title}</TableCell>
                   <TableCell>
-                    <Badge className={difficultyVariant[problem.difficulty]}>
+                    <Badge variant={"outline"} className={difficultyVariant[problem.difficulty]}>
                       {problem.difficulty}
                     </Badge>
                   </TableCell>

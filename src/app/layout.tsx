@@ -71,7 +71,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
         <link
-          href="https://fonts.googleapis.com/css2?family=Source+Code+Pro&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Fira+Code&display=swap"
           rel="stylesheet"
         />
       </head>
@@ -82,7 +82,7 @@ export default function RootLayout({
               <div className="flex items-center gap-2 p-2">
                 <Button asChild variant="ghost" className="h-10 w-10 p-2">
                   <Link href="/dashboard">
-                    <Bug className="h-full w-full text-secondary" />
+                    <Bug className="h-full w-full text-primary" />
                   </Link>
                 </Button>
                 <h1 className="text-xl font-semibold">DebugArena</h1>

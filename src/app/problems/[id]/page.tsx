@@ -16,8 +16,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { CodeEditor } from "@/components/code-editor";
 
 export default function ProblemPage({ params }: { params: { id: string } }) {
   const problems = getProblems();
@@ -78,18 +78,15 @@ export default function ProblemPage({ params }: { params: { id: string } }) {
                   <SelectValue placeholder="Language" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="javascript">JavaScript</SelectItem>
+                  <SelectItem value="cpp">C++</SelectItem>
                   <SelectItem value="python">Python</SelectItem>
+                  <SelectItem value="java">Java</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </CardHeader>
           <CardContent className="h-[calc(100%-100px)]">
-            <Textarea
-              placeholder="Enter your code here..."
-              className="h-full resize-none font-code"
-              defaultValue={problem.buggyCode}
-            />
+             <CodeEditor value={problem.buggyCode || ''} language="javascript" />
           </CardContent>
         </Card>
         <div className="flex justify-end gap-2">
